@@ -38,7 +38,7 @@ AVRPlayer::AVRPlayer()
 		MeshLeft->SetWorldLocationAndRotation(FVector(-2.98126f, -3.5f, 4.561753f), FRotator(-25, -180, 90));
 	}
 
-	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMeshRight(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_QuinnXR_left.SKM_QuinnXR_left'"));
+	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMeshRight(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_MannyXR_right.SKM_MannyXR_right'"));
 	// 로드 성공했다면 적용하고싶다.
 	if (TempMeshRight.Succeeded())
 	{
@@ -46,6 +46,10 @@ AVRPlayer::AVRPlayer()
 		MeshRight->SetWorldLocationAndRotation(FVector(-2.98126f, 3.5f, 4.561753f), FRotator(25, 0, 90));
 	}
 
+	// 써클을 생성하고 충돌처리가 되지않게 처리하고싶다.
+	TeleportCircle = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TeleportCircle"));
+	TeleportCircle->SetupAttachment(RootComponent);
+	TeleportCircle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void AVRPlayer::BeginPlay()
@@ -70,6 +74,30 @@ void AVRPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// 만약 버튼이 눌러졌다면
+	//if (만약 버튼이 눌러졌다면)
+	{
+		DrawLine();
+	}
+}
+
+void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
+{
+	// 누르면 써클이 보이고
+	TeleportCircle->SetVisibility(true);
+}
+
+void AVRPlayer::ONIATeleportEnd(const FInputActionValue& value)
+{
+	// 떼면 안보이게 하고싶다.
+	TeleportCircle->SetVisibility(false);
+}
+
+void AVRPlayer::DrawLine()
+{
+	FVector start = MeshRight->GetComponentLocation();
+	FVector end = start + MeshRight->GetRightVector() * 100000;
+	DrawDebugLine(GetWorld(), start, end, FColor::Red, false, -1, 0, 1);
 }
 
 // Called to bind functionality to input
@@ -81,14 +109,30 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	if (input) {
 		input->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AVRPlayer::OnIAMove);
+		input->BindAction(IA_Turn, ETriggerEvent::Triggered, this, &AVRPlayer::OnIATurn);
+
+		// 텔레포트 입력을 등록하고싶다.
+		// 눌렀을때 ONIATeleportStart
+		input->BindAction(IA_Teleport, ETriggerEvent::Started, this, &AVRPlayer::ONIATeleportStart);
+		// 뗏을때는 ONIATeleportEnd
+		input->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::ONIATeleportEnd);
 	}
 }
+
+void AVRPlayer::OnIATurn(const FInputActionValue& value)
+{
+	float v = value.Get<float>();
+	AddControllerYawInput(v);
+}
+
+
 
 void AVRPlayer::OnIAMove(const FInputActionValue& value)
 {
 	FVector2D v = value.Get<FVector2D>();
 
-	AddMovementInput(GetActorForwardVector(), v.X);
-	AddMovementInput(GetActorRightVector(), v.Y);
+	AddMovementInput(GetActorForwardVector(), v.Y);
+	AddMovementInput(GetActorRightVector(), v.X);
 }
+
 
