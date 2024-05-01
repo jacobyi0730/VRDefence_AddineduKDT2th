@@ -72,9 +72,8 @@ public:
 	void ONIATeleportStart(const FInputActionValue& value);
 	void ONIATeleportEnd(const FInputActionValue& value);
 
-	void DrawLine();
+	void DrawLine(const FVector& start, const FVector& end);
 
-
-
-
+	bool HitTest(FVector start, FVector end, FHitResult& OutHitInfo);
+	void ResetTeleport();
 };

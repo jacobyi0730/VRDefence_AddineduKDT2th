@@ -68,6 +68,8 @@ void AVRPlayer::BeginPlay()
 			subsystem->AddMappingContext(IMC_VRPlayer, 0);
 		}
 	}
+
+	ResetTeleport();
 }
 
 void AVRPlayer::Tick(float DeltaTime)
@@ -75,29 +77,61 @@ void AVRPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// 만약 버튼이 눌러졌다면
-	//if (만약 버튼이 눌러졌다면)
+	if (true == bTeleporting)
 	{
-		DrawLine();
+		FVector start = MeshRight->GetComponentLocation();
+		FVector end = start + MeshRight->GetRightVector() * 100000;
+
+		// 선 그리기
+		DrawLine(start, end);
+
+		// LineTrace를 해서 부딪힌 곳이 있다면
+		FHitResult hitInfo;
+		bool bHit = HitTest(start, end, hitInfo);
+		if (bHit) {
+			//	그곳에 써클을 보이게하고 배치하고싶다.
+			TeleportCircle->SetWorldLocation(hitInfo.Location);
+			TeleportCircle->SetVisibility(true);
+		}
+		// 그렇지 않다면
+		else {
+			//  써클을 보이지않게 하고싶다.
+			TeleportCircle->SetVisibility(false);
+		}
 	}
 }
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
 {
 	// 누르면 써클이 보이고
-	TeleportCircle->SetVisibility(true);
+	bTeleporting = true;
 }
 
 void AVRPlayer::ONIATeleportEnd(const FInputActionValue& value)
 {
 	// 떼면 안보이게 하고싶다.
-	TeleportCircle->SetVisibility(false);
+	ResetTeleport();
+
 }
 
-void AVRPlayer::DrawLine()
+void AVRPlayer::DrawLine(const FVector& start, const FVector& end)
 {
-	FVector start = MeshRight->GetComponentLocation();
-	FVector end = start + MeshRight->GetRightVector() * 100000;
 	DrawDebugLine(GetWorld(), start, end, FColor::Red, false, -1, 0, 1);
+}
+
+bool AVRPlayer::HitTest(FVector start, FVector end, FHitResult& OutHitInfo)
+{
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	return GetWorld()->LineTraceSingleByChannel(OutHitInfo, start, end, ECC_Visibility, params);
+}
+
+void AVRPlayer::ResetTeleport()
+{
+	// 써클을 보이지않게 
+	// 텔레포트중이 아님
+	TeleportCircle->SetVisibility(false);
+	bTeleporting = false;
 }
 
 // Called to bind functionality to input
