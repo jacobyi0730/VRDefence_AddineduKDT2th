@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -27,22 +27,22 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// VRÄ«¸Ş¶ó ÄÄÆ÷³ÍÆ®¸¦ »ı¼ºÇÏ°í ·çÆ®¿¡ ºÙÀÌ°í½Í´Ù.
+	// VRì¹´ë©”ë¼ ì»´í¬ë„ŒíŠ¸ë¥¼ ìƒì„±í•˜ê³  ë£¨íŠ¸ì— ë¶™ì´ê³ ì‹¶ë‹¤.
 	UPROPERTY(EditDefaultsOnly)
 	class UCameraComponent* VRCamera;
-	// ¸ğ¼ÇÄÁÆ®·Ñ·¯ ¿Ş¼Õ, ¿À¸¥¼Õ »ı¼ºÇÏ°í ·çÆ®¿¡ ºÙÀÌ°í½Í´Ù.
+	// ëª¨ì…˜ì»¨íŠ¸ë¡¤ëŸ¬ ì™¼ì†, ì˜¤ë¥¸ì† ìƒì„±í•˜ê³  ë£¨íŠ¸ì— ë¶™ì´ê³ ì‹¶ë‹¤.
 	UPROPERTY(EditDefaultsOnly)
 	class UMotionControllerComponent* MotionLeft;
 
 	UPROPERTY(EditDefaultsOnly)
 	class UMotionControllerComponent* MotionRight;
-	// ¿Ş¼Õ, ¿À¸¥¼Õ ½ºÄÌ·¹Å»¸Ş½ÃÄÄÆ÷³ÍÆ®¸¦ ¸¸µé¾î¼­ ¸ğ¼ÇÄÁÆ®·Ñ·¯¿¡ ºÙÀÌ°í½Í´Ù.
+	// ì™¼ì†, ì˜¤ë¥¸ì† ìŠ¤ì¼ˆë ˆíƒˆë©”ì‹œì»´í¬ë„ŒíŠ¸ë¥¼ ë§Œë“¤ì–´ì„œ ëª¨ì…˜ì»¨íŠ¸ë¡¤ëŸ¬ì— ë¶™ì´ê³ ì‹¶ë‹¤.
 	UPROPERTY(EditDefaultsOnly)
 	class USkeletalMeshComponent* MeshLeft;
 
 	UPROPERTY(EditDefaultsOnly)
 	class USkeletalMeshComponent* MeshRight;
-	// ¿Ş¼Õ, ¿À¸¥¼Õ ½ºÄÌ·¹Å»¸Ş½Ã¸¦ ·ÎµåÇØ¼­ Àû¿ëÇÏ°í½Í´Ù.
+	// ì™¼ì†, ì˜¤ë¥¸ì† ìŠ¤ì¼ˆë ˆíƒˆë©”ì‹œë¥¼ ë¡œë“œí•´ì„œ ì ìš©í•˜ê³ ì‹¶ë‹¤.
 
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	class UInputMappingContext* IMC_VRPlayer;
@@ -59,13 +59,13 @@ public:
 	void OnIATurn(const FInputActionValue& value);
 
 
-	// ÅÚ·¹Æ÷Æ® Ã³¸®¸¦ À§ÇØ¼­ ½áÅ¬À» Ç¥ÇöÇÏ°í½Í´Ù.
+	// í…”ë ˆí¬íŠ¸ ì²˜ë¦¬ë¥¼ ìœ„í•´ì„œ ì¨í´ì„ í‘œí˜„í•˜ê³ ì‹¶ë‹¤.
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	class UStaticMeshComponent* TeleportCircle;
 
-	// ÅÚ·¹Æ÷Æ®ÁßÀÎ°¡? ¿©ºÎ¸¦ ±â¾ïÇÏ°í½Í´Ù.
+	// í…”ë ˆí¬íŠ¸ì¤‘ì¸ê°€? ì—¬ë¶€ë¥¼ ê¸°ì–µí•˜ê³ ì‹¶ë‹¤.
 	bool bTeleporting;
-	// ÀÔ·ÂÃ³¸®¿Í ±×¿¡ ÇØ´çÇÏ´Â ÇÔ¼ö¸¦ ±¸ÇöÇÏ°í½Í´Ù.
+	// ì…ë ¥ì²˜ë¦¬ì™€ ê·¸ì— í•´ë‹¹í•˜ëŠ” í•¨ìˆ˜ë¥¼ êµ¬í˜„í•˜ê³ ì‹¶ë‹¤.
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	class UInputAction* IA_Teleport;
 

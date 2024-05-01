@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "VRPlayer.h"
@@ -12,10 +12,10 @@ AVRPlayer::AVRPlayer()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	// VRÄ«¸Ş¶ó ÄÄÆ÷³ÍÆ®¸¦ »ı¼ºÇÏ°í ·çÆ®¿¡ ºÙÀÌ°í½Í´Ù.
+	// VRì¹´ë©”ë¼ ì»´í¬ë„ŒíŠ¸ë¥¼ ìƒì„±í•˜ê³  ë£¨íŠ¸ì— ë¶™ì´ê³ ì‹¶ë‹¤.
 	VRCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("VRCamera"));
 	VRCamera->SetupAttachment(RootComponent);
-	// ¸ğ¼ÇÄÁÆ®·Ñ·¯ ¿Ş¼Õ, ¿À¸¥¼Õ »ı¼ºÇÏ°í ·çÆ®¿¡ ºÙÀÌ°í½Í´Ù.
+	// ëª¨ì…˜ì»¨íŠ¸ë¡¤ëŸ¬ ì™¼ì†, ì˜¤ë¥¸ì† ìƒì„±í•˜ê³  ë£¨íŠ¸ì— ë¶™ì´ê³ ì‹¶ë‹¤.
 	MotionLeft = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("MotionLeft"));
 	MotionLeft->SetTrackingMotionSource(TEXT("Left"));
 	MotionLeft->SetupAttachment(RootComponent);
@@ -23,15 +23,15 @@ AVRPlayer::AVRPlayer()
 	MotionRight = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("MotionRight"));
 	MotionRight->SetTrackingMotionSource(TEXT("Right"));
 	MotionRight->SetupAttachment(RootComponent);
-	// ¿Ş¼Õ, ¿À¸¥¼Õ ½ºÄÌ·¹Å»¸Ş½ÃÄÄÆ÷³ÍÆ®¸¦ ¸¸µé¾î¼­ ¸ğ¼ÇÄÁÆ®·Ñ·¯¿¡ ºÙÀÌ°í½Í´Ù.
+	// ì™¼ì†, ì˜¤ë¥¸ì† ìŠ¤ì¼ˆë ˆíƒˆë©”ì‹œì»´í¬ë„ŒíŠ¸ë¥¼ ë§Œë“¤ì–´ì„œ ëª¨ì…˜ì»¨íŠ¸ë¡¤ëŸ¬ì— ë¶™ì´ê³ ì‹¶ë‹¤.
 	MeshLeft = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshLeft"));
 	MeshLeft->SetupAttachment(MotionLeft);
 	MeshRight = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshRight"));
 	MeshRight->SetupAttachment(MotionRight);
-	// ¿Ş¼Õ, ¿À¸¥¼Õ ½ºÄÌ·¹Å»¸Ş½Ã¸¦ ·ÎµåÇØ¼­ Àû¿ëÇÏ°í½Í´Ù.
+	// ì™¼ì†, ì˜¤ë¥¸ì† ìŠ¤ì¼ˆë ˆíƒˆë©”ì‹œë¥¼ ë¡œë“œí•´ì„œ ì ìš©í•˜ê³ ì‹¶ë‹¤.
 
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMeshLeft(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_QuinnXR_left.SKM_QuinnXR_left'"));
-	// ·Îµå ¼º°øÇß´Ù¸é Àû¿ëÇÏ°í½Í´Ù.
+	// ë¡œë“œ ì„±ê³µí–ˆë‹¤ë©´ ì ìš©í•˜ê³ ì‹¶ë‹¤.
 	if (TempMeshLeft.Succeeded())
 	{
 		MeshLeft->SetSkeletalMesh(TempMeshLeft.Object);
@@ -39,14 +39,14 @@ AVRPlayer::AVRPlayer()
 	}
 
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMeshRight(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_MannyXR_right.SKM_MannyXR_right'"));
-	// ·Îµå ¼º°øÇß´Ù¸é Àû¿ëÇÏ°í½Í´Ù.
+	// ë¡œë“œ ì„±ê³µí–ˆë‹¤ë©´ ì ìš©í•˜ê³ ì‹¶ë‹¤.
 	if (TempMeshRight.Succeeded())
 	{
 		MeshRight->SetSkeletalMesh(TempMeshRight.Object);
 		MeshRight->SetWorldLocationAndRotation(FVector(-2.98126f, 3.5f, 4.561753f), FRotator(25, 0, 90));
 	}
 
-	// ½áÅ¬À» »ı¼ºÇÏ°í Ãæµ¹Ã³¸®°¡ µÇÁö¾Ê°Ô Ã³¸®ÇÏ°í½Í´Ù.
+	// ì¨í´ì„ ìƒì„±í•˜ê³  ì¶©ëŒì²˜ë¦¬ê°€ ë˜ì§€ì•Šê²Œ ì²˜ë¦¬í•˜ê³ ì‹¶ë‹¤.
 	TeleportCircle = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TeleportCircle"));
 	TeleportCircle->SetupAttachment(RootComponent);
 	TeleportCircle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -56,15 +56,15 @@ void AVRPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ÇÃ·¹ÀÌ¾îÄÁÆ®·Ñ·¯¸¦ °¡Á®¿À°í½Í´Ù.
+	// í”Œë ˆì´ì–´ì»¨íŠ¸ë¡¤ëŸ¬ë¥¼ ê°€ì ¸ì˜¤ê³ ì‹¶ë‹¤.
 	auto* pc = Cast<APlayerController>(Controller);
-	// UEnhancedInputLocalPlayerSubsystem¸¦ °¡Á®¿Í¼­
+	// UEnhancedInputLocalPlayerSubsystemë¥¼ ê°€ì ¸ì™€ì„œ
 	if (pc)
 	{
 		auto subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(pc->GetLocalPlayer());
 		if (subsystem)
 		{
-			// AddMappingContext¸¦ È£ÃâÇÏ°í½Í´Ù.
+			// AddMappingContextë¥¼ í˜¸ì¶œí•˜ê³ ì‹¶ë‹¤.
 			subsystem->AddMappingContext(IMC_VRPlayer, 0);
 		}
 	}
@@ -76,26 +76,26 @@ void AVRPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// ¸¸¾à ¹öÆ°ÀÌ ´­·¯Á³´Ù¸é
+	// ë§Œì•½ ë²„íŠ¼ì´ ëˆŒëŸ¬ì¡Œë‹¤ë©´
 	if (true == bTeleporting)
 	{
 		FVector start = MeshRight->GetComponentLocation();
 		FVector end = start + MeshRight->GetRightVector() * 100000;
 
-		// ¼± ±×¸®±â
+		// ì„  ê·¸ë¦¬ê¸°
 		DrawLine(start, end);
 
-		// LineTrace¸¦ ÇØ¼­ ºÎµúÈù °÷ÀÌ ÀÖ´Ù¸é
+		// LineTraceë¥¼ í•´ì„œ ë¶€ë”ªíŒ ê³³ì´ ìˆë‹¤ë©´
 		FHitResult hitInfo;
 		bool bHit = HitTest(start, end, hitInfo);
 		if (bHit) {
-			//	±×°÷¿¡ ½áÅ¬À» º¸ÀÌ°ÔÇÏ°í ¹èÄ¡ÇÏ°í½Í´Ù.
+			//	ê·¸ê³³ì— ì¨í´ì„ ë³´ì´ê²Œí•˜ê³  ë°°ì¹˜í•˜ê³ ì‹¶ë‹¤.
 			TeleportCircle->SetWorldLocation(hitInfo.Location);
 			TeleportCircle->SetVisibility(true);
 		}
-		// ±×·¸Áö ¾Ê´Ù¸é
+		// ê·¸ë ‡ì§€ ì•Šë‹¤ë©´
 		else {
-			//  ½áÅ¬À» º¸ÀÌÁö¾Ê°Ô ÇÏ°í½Í´Ù.
+			//  ì¨í´ì„ ë³´ì´ì§€ì•Šê²Œ í•˜ê³ ì‹¶ë‹¤.
 			TeleportCircle->SetVisibility(false);
 		}
 	}
@@ -103,13 +103,13 @@ void AVRPlayer::Tick(float DeltaTime)
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
 {
-	// ´©¸£¸é ½áÅ¬ÀÌ º¸ÀÌ°í
+	// ëˆ„ë¥´ë©´ ì¨í´ì´ ë³´ì´ê³ 
 	bTeleporting = true;
 }
 
 void AVRPlayer::ONIATeleportEnd(const FInputActionValue& value)
 {
-	// ¶¼¸é ¾Èº¸ÀÌ°Ô ÇÏ°í½Í´Ù.
+	// ë–¼ë©´ ì•ˆë³´ì´ê²Œ í•˜ê³ ì‹¶ë‹¤.
 	ResetTeleport();
 
 }
@@ -128,8 +128,8 @@ bool AVRPlayer::HitTest(FVector start, FVector end, FHitResult& OutHitInfo)
 
 void AVRPlayer::ResetTeleport()
 {
-	// ½áÅ¬À» º¸ÀÌÁö¾Ê°Ô 
-	// ÅÚ·¹Æ÷Æ®ÁßÀÌ ¾Æ´Ô
+	// ì¨í´ì„ ë³´ì´ì§€ì•Šê²Œ 
+	// í…”ë ˆí¬íŠ¸ì¤‘ì´ ì•„ë‹˜
 	TeleportCircle->SetVisibility(false);
 	bTeleporting = false;
 }
@@ -145,10 +145,10 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		input->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AVRPlayer::OnIAMove);
 		input->BindAction(IA_Turn, ETriggerEvent::Triggered, this, &AVRPlayer::OnIATurn);
 
-		// ÅÚ·¹Æ÷Æ® ÀÔ·ÂÀ» µî·ÏÇÏ°í½Í´Ù.
-		// ´­·¶À»¶§ ONIATeleportStart
+		// í…”ë ˆí¬íŠ¸ ì…ë ¥ì„ ë“±ë¡í•˜ê³ ì‹¶ë‹¤.
+		// ëˆŒë €ì„ë•Œ ONIATeleportStart
 		input->BindAction(IA_Teleport, ETriggerEvent::Started, this, &AVRPlayer::ONIATeleportStart);
-		// ¶ÂÀ»¶§´Â ONIATeleportEnd
+		// ë—ì„ë•ŒëŠ” ONIATeleportEnd
 		input->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::ONIATeleportEnd);
 	}
 }
