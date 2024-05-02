@@ -76,4 +76,27 @@ public:
 
 	bool HitTest(FVector start, FVector end, FHitResult& OutHitInfo);
 	void ResetTeleport();
+
+	// 목적지를 기억하고
+	FVector TeleportLocation;
+	// 목적지로 이동하는 기능
+	void DoTeleport();
+
+
+	// 곡선 텔레포트
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	bool bTeleportCurve = true;
+
+	void TickLine();
+	void TickCurve();
+
+	bool CheckHitTeleport(const FVector& start, FVector& end);
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	int32 CurveStep = 200;
+
+	TArray<FVector> Points;
+	void MakeCurvePoints();
+
+	void DrawCurve(int max);
 };

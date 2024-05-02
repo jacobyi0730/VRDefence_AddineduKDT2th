@@ -6,6 +6,7 @@
 #include "MotionControllerComponent.h"
 #include <../../../../../../../Plugins/EnhancedInput/Source/EnhancedInput/Public/EnhancedInputSubsystems.h>
 #include <../../../../../../../Plugins/EnhancedInput/Source/EnhancedInput/Public/EnhancedInputComponent.h>
+#include <Components/CapsuleComponent.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -32,7 +33,7 @@ AVRPlayer::AVRPlayer()
 
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMeshLeft(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_QuinnXR_left.SKM_QuinnXR_left'"));
 	// 로드 성공했다면 적용하고싶다.
-	if (TempMeshLeft.Succeeded())
+	if ( TempMeshLeft.Succeeded() )
 	{
 		MeshLeft->SetSkeletalMesh(TempMeshLeft.Object);
 		MeshLeft->SetWorldLocationAndRotation(FVector(-2.98126f, -3.5f, 4.561753f), FRotator(-25, -180, 90));
@@ -40,7 +41,7 @@ AVRPlayer::AVRPlayer()
 
 	ConstructorHelpers::FObjectFinder<USkeletalMesh> TempMeshRight(TEXT("/Script/Engine.SkeletalMesh'/Game/Characters/MannequinsXR/Meshes/SKM_MannyXR_right.SKM_MannyXR_right'"));
 	// 로드 성공했다면 적용하고싶다.
-	if (TempMeshRight.Succeeded())
+	if ( TempMeshRight.Succeeded() )
 	{
 		MeshRight->SetSkeletalMesh(TempMeshRight.Object);
 		MeshRight->SetWorldLocationAndRotation(FVector(-2.98126f, 3.5f, 4.561753f), FRotator(25, 0, 90));
@@ -59,10 +60,10 @@ void AVRPlayer::BeginPlay()
 	// 플레이어컨트롤러를 가져오고싶다.
 	auto* pc = Cast<APlayerController>(Controller);
 	// UEnhancedInputLocalPlayerSubsystem를 가져와서
-	if (pc)
+	if ( pc )
 	{
 		auto subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(pc->GetLocalPlayer());
-		if (subsystem)
+		if ( subsystem )
 		{
 			// AddMappingContext를 호출하고싶다.
 			subsystem->AddMappingContext(IMC_VRPlayer, 0);
@@ -77,27 +78,100 @@ void AVRPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// 만약 버튼이 눌러졌다면
-	if (true == bTeleporting)
+	if ( true == bTeleporting )
 	{
-		FVector start = MeshRight->GetComponentLocation();
-		FVector end = start + MeshRight->GetRightVector() * 100000;
-
-		// 선 그리기
-		DrawLine(start, end);
-
-		// LineTrace를 해서 부딪힌 곳이 있다면
-		FHitResult hitInfo;
-		bool bHit = HitTest(start, end, hitInfo);
-		if (bHit) {
-			//	그곳에 써클을 보이게하고 배치하고싶다.
-			TeleportCircle->SetWorldLocation(hitInfo.Location);
-			TeleportCircle->SetVisibility(true);
+		// 만약 곡선이면
+		if ( bTeleportCurve )
+		{
+			TickCurve();
 		}
-		// 그렇지 않다면
+		// 그렇지 않으면
 		else {
-			//  써클을 보이지않게 하고싶다.
-			TeleportCircle->SetVisibility(false);
+			TickLine();
 		}
+	}
+}
+
+void AVRPlayer::TickLine()
+{
+	FVector start = MeshRight->GetComponentLocation();
+	FVector end = start + MeshRight->GetRightVector() * 100000;
+
+	CheckHitTeleport(start, end);
+
+	// 선 그리기
+	DrawLine(start, end);
+}
+
+void AVRPlayer::TickCurve()
+{
+	// 자유 낙하 공식
+	// 1/2 * gravity * t * t
+
+	// 1. 궤적을 계산해서 정점정보를 목록으로 갖고 있고싶다.
+	MakeCurvePoints();
+	// 2. 점을 이으면서 충돌처리를 하고싶다. 모든 점들을 CheckHitTeleport를 이용해서 처리하고싶다.
+
+	FHitResult hitInfo;
+	int maxPoints = Points.Num();
+	for ( int i = 0; i < Points.Num() - 1; i++ )
+	{
+		if ( CheckHitTeleport(Points[i], Points[i + 1]) )
+		{
+			// 어딘가 부딪혔다.
+			maxPoints = i + 1;
+			break;
+		}
+	}
+	// 3. 선을 그리고싶다.
+	DrawCurve(maxPoints);
+}
+
+bool AVRPlayer::CheckHitTeleport(const FVector& start, FVector& end)
+{
+	// LineTrace를 해서 부딪힌 곳이 있다면
+	FHitResult hitInfo;
+	bool bHit = HitTest(start, end, hitInfo);
+	if ( bHit && hitInfo.GetActor()->GetName().Contains(TEXT("Floor")) ) {
+		//	그곳에 써클을 보이게하고 배치하고싶다.
+		end = hitInfo.ImpactPoint;
+		TeleportLocation = hitInfo.Location;
+		TeleportCircle->SetWorldLocation(hitInfo.Location);
+		TeleportCircle->SetVisibility(true);
+
+	}
+	// 그렇지 않다면
+	else {
+		//  써클을 보이지않게 하고싶다.
+		TeleportCircle->SetVisibility(false);
+	}
+	return bHit;
+}
+
+void AVRPlayer::MakeCurvePoints()
+{
+	// 1/2 * g * t * t
+	// CurveStep
+	Points.Empty(CurveStep);
+	FVector gravity(0, 0, -981);
+	float simDT = 1.f / 60.f;
+	FVector point = MeshRight->GetComponentLocation();
+	FVector velocity = MeshRight->GetRightVector() * 1000;
+	Points.Add(point);
+	for ( int i = 0; i < CurveStep; i++ )
+	{
+		point += velocity * simDT + 0.5f * gravity * simDT * simDT;
+		velocity += gravity * simDT;
+		Points.Add(point);
+	}
+
+}
+
+void AVRPlayer::DrawCurve(int max)
+{
+	for ( int i = 0; i < max - 1; i++ )
+	{
+		DrawLine(Points[i], Points[i + 1]);
 	}
 }
 
@@ -110,6 +184,11 @@ void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
 void AVRPlayer::ONIATeleportEnd(const FInputActionValue& value)
 {
 	// 떼면 안보이게 하고싶다.
+	// 만약 써클이 활성화 되어있다면 목적지로 이동하고싶다.
+	if ( TeleportCircle->GetVisibleFlag() )
+	{
+		DoTeleport();
+	}
 	ResetTeleport();
 
 }
@@ -134,6 +213,15 @@ void AVRPlayer::ResetTeleport()
 	bTeleporting = false;
 }
 
+void AVRPlayer::DoTeleport()
+{
+	// 목적지로 이동
+	FVector height = FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	SetActorLocation(TeleportLocation + height);
+}
+
+
+
 // Called to bind functionality to input
 void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -141,7 +229,7 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	auto* input = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 
-	if (input) {
+	if ( input ) {
 		input->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AVRPlayer::OnIAMove);
 		input->BindAction(IA_Turn, ETriggerEvent::Triggered, this, &AVRPlayer::OnIATurn);
 
