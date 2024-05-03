@@ -61,7 +61,8 @@ public:
 
 	// 텔레포트 처리를 위해서 써클을 표현하고싶다.
 	UPROPERTY(EditDefaultsOnly, Category = VR)
-	class UStaticMeshComponent* TeleportCircle;
+	class UNiagaraComponent* TeleportCircleVFX;
+	//class UStaticMeshComponent* TeleportCircle;
 
 	// 텔레포트중인가? 여부를 기억하고싶다.
 	bool bTeleporting;
@@ -99,4 +100,21 @@ public:
 	void MakeCurvePoints();
 
 	void DrawCurve(int max);
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UNiagaraComponent* TeleportTraceVFX;
+
+
+	// 워프 : 빠르게 텔레포트 지점으로 이동하고싶다.
+	// 워프 기능을 쓸것인가?, 워프 기능, 워프 이동 타이머
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	bool bWarp = true;
+
+	FTimerHandle WarpTimerHandle;
+	// 시간이 흐르다가 워프 이동시간이 끝나면 워프 종료
+	float CurrentTime;
+	float WarpTime = 0.2f;
+
+	void DoWarp();
+
 };

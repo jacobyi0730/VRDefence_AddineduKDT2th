@@ -7,6 +7,8 @@
 #include <../../../../../../../Plugins/EnhancedInput/Source/EnhancedInput/Public/EnhancedInputSubsystems.h>
 #include <../../../../../../../Plugins/EnhancedInput/Source/EnhancedInput/Public/EnhancedInputComponent.h>
 #include <Components/CapsuleComponent.h>
+#include <../../../../../../../Plugins/FX/Niagara/Source/Niagara/Public/NiagaraComponent.h>
+#include <../../../../../../../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -48,9 +50,13 @@ AVRPlayer::AVRPlayer()
 	}
 
 	// 써클을 생성하고 충돌처리가 되지않게 처리하고싶다.
-	TeleportCircle = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TeleportCircle"));
-	TeleportCircle->SetupAttachment(RootComponent);
-	TeleportCircle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TeleportCircleVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TeleportCircleVFX"));
+	TeleportCircleVFX->SetupAttachment(RootComponent);
+	TeleportCircleVFX->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+
+	TeleportTraceVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TeleportTraceVFX"));
+	TeleportTraceVFX->SetupAttachment(RootComponent);
 }
 
 void AVRPlayer::BeginPlay()
@@ -80,6 +86,8 @@ void AVRPlayer::Tick(float DeltaTime)
 	// 만약 버튼이 눌러졌다면
 	if ( true == bTeleporting )
 	{
+		UNiagaraDataInterfaceArrayFunctionLibrary::SetNiagaraArrayVector(TeleportTraceVFX, FName("User.PointArray"), Points);
+
 		// 만약 곡선이면
 		if ( bTeleportCurve )
 		{
@@ -101,6 +109,10 @@ void AVRPlayer::TickLine()
 
 	// 선 그리기
 	DrawLine(start, end);
+
+	Points.Empty(2);
+	Points.Add(start);
+	Points.Add(end);
 }
 
 void AVRPlayer::TickCurve()
@@ -123,6 +135,10 @@ void AVRPlayer::TickCurve()
 			break;
 		}
 	}
+
+	// 배열의 크기를 maxPoints로 설정하고싶다.
+	Points.SetNum(maxPoints);
+
 	// 3. 선을 그리고싶다.
 	DrawCurve(maxPoints);
 }
@@ -136,14 +152,14 @@ bool AVRPlayer::CheckHitTeleport(const FVector& start, FVector& end)
 		//	그곳에 써클을 보이게하고 배치하고싶다.
 		end = hitInfo.ImpactPoint;
 		TeleportLocation = hitInfo.Location;
-		TeleportCircle->SetWorldLocation(hitInfo.Location);
-		TeleportCircle->SetVisibility(true);
+		TeleportCircleVFX->SetWorldLocation(hitInfo.Location);
+		TeleportCircleVFX->SetVisibility(true);
 
 	}
 	// 그렇지 않다면
 	else {
 		//  써클을 보이지않게 하고싶다.
-		TeleportCircle->SetVisibility(false);
+		TeleportCircleVFX->SetVisibility(false);
 	}
 	return bHit;
 }
@@ -175,19 +191,65 @@ void AVRPlayer::DrawCurve(int max)
 	}
 }
 
+void AVRPlayer::DoWarp()
+{
+	if ( false == bWarp )
+		return;
+	// 시간이 흐르다가 워프 이동시간이 끝나면 워프 종료
+
+	CurrentTime = 0;
+
+	FVector height = FVector(0, 0, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	FVector tarLoc = TeleportLocation + height;
+	FVector originLoc = GetActorLocation();
+
+	// 충돌체를 끄고싶다.
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	GetWorld()->GetTimerManager().SetTimer(WarpTimerHandle, [&, originLoc, tarLoc]() {
+		
+		// 이동처리
+		CurrentTime += GetWorld()->GetDeltaSeconds();
+		// 현재위치, 목적지
+		float alpha = CurrentTime / WarpTime;
+		FVector curLoc =  FMath::Lerp(originLoc, tarLoc, alpha);
+		SetActorLocation(curLoc);
+
+		// 만약 도착했다면
+		if ( alpha >= 1 )
+		{
+			// 타이머를 멈추고싶다.
+			GetWorld()->GetTimerManager().ClearTimer(WarpTimerHandle);
+			// 내위치를 tarLoc으로 하고싶다.
+			SetActorLocation(tarLoc);
+			// 충돌체를 켜고싶다.
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		}
+		}, 0.033333f, true);
+}
+
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
 {
 	// 누르면 써클이 보이고
 	bTeleporting = true;
+	// TraceVFX를 활성화 하고싶다.
+	TeleportTraceVFX->SetVisibility(true);
 }
 
 void AVRPlayer::ONIATeleportEnd(const FInputActionValue& value)
 {
 	// 떼면 안보이게 하고싶다.
 	// 만약 써클이 활성화 되어있다면 목적지로 이동하고싶다.
-	if ( TeleportCircle->GetVisibleFlag() )
+	if ( TeleportCircleVFX->GetVisibleFlag() )
 	{
-		DoTeleport();
+		if ( bWarp )
+		{
+			DoWarp();
+		}
+		else
+		{
+			DoTeleport();
+		}
 	}
 	ResetTeleport();
 
@@ -195,7 +257,7 @@ void AVRPlayer::ONIATeleportEnd(const FInputActionValue& value)
 
 void AVRPlayer::DrawLine(const FVector& start, const FVector& end)
 {
-	DrawDebugLine(GetWorld(), start, end, FColor::Red, false, -1, 0, 1);
+	//DrawDebugLine(GetWorld(), start, end, FColor::Red, false, -1, 0, 1);
 }
 
 bool AVRPlayer::HitTest(FVector start, FVector end, FHitResult& OutHitInfo)
@@ -209,8 +271,9 @@ void AVRPlayer::ResetTeleport()
 {
 	// 써클을 보이지않게 
 	// 텔레포트중이 아님
-	TeleportCircle->SetVisibility(false);
+	TeleportCircleVFX->SetVisibility(false);
 	bTeleporting = false;
+	TeleportTraceVFX->SetVisibility(false);
 }
 
 void AVRPlayer::DoTeleport()
