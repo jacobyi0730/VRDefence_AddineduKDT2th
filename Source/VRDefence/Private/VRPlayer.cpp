@@ -310,12 +310,6 @@ void AVRPlayer::DrawCrosshair()
 
 	FVector dir = Crosshair->GetActorLocation() - VRCamera->GetComponentLocation();
 	Crosshair->SetActorRotation(UKismetMathLibrary::MakeRotFromX(dir.GetSafeNormal()));
-
-
-
-
-
-
 }
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
