@@ -9,6 +9,8 @@
 #include <Components/CapsuleComponent.h>
 #include <../../../../../../../Plugins/FX/Niagara/Source/Niagara/Public/NiagaraComponent.h>
 #include <../../../../../../../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
+#include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h>
+#include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/KismetMathLibrary.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -57,6 +59,12 @@ AVRPlayer::AVRPlayer()
 
 	TeleportTraceVFX = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TeleportTraceVFX"));
 	TeleportTraceVFX->SetupAttachment(RootComponent);
+
+
+	RightAim = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightAim"));
+	RightAim->SetupAttachment(RootComponent);
+	RightAim->SetTrackingMotionSource(TEXT("RightAim"));
+
 }
 
 void AVRPlayer::BeginPlay()
@@ -77,11 +85,17 @@ void AVRPlayer::BeginPlay()
 	}
 
 	ResetTeleport();
+
+	Crosshair = GetWorld()->SpawnActor<AActor>(CrosshairFactory);
 }
 
 void AVRPlayer::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	DrawCrosshair();
+
+
 
 	// 만약 버튼이 눌러졌다면
 	if ( true == bTeleporting )
@@ -207,12 +221,12 @@ void AVRPlayer::DoWarp()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	GetWorld()->GetTimerManager().SetTimer(WarpTimerHandle, [&, originLoc, tarLoc]() {
-		
+
 		// 이동처리
 		CurrentTime += GetWorld()->GetDeltaSeconds();
 		// 현재위치, 목적지
 		float alpha = CurrentTime / WarpTime;
-		FVector curLoc =  FMath::Lerp(originLoc, tarLoc, alpha);
+		FVector curLoc = FMath::Lerp(originLoc, tarLoc, alpha);
 		SetActorLocation(curLoc);
 
 		// 만약 도착했다면
@@ -226,6 +240,82 @@ void AVRPlayer::DoWarp()
 			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		}
 		}, 0.033333f, true);
+}
+
+void AVRPlayer::OnIAFire(const FInputActionValue& value)
+{
+	// 라인트레이스를 발사하고싶다.
+	// RightAim을 이용해서
+	FHitResult hitInfo;
+	FVector start = RightAim->GetComponentLocation();
+	FVector end = start + RightAim->GetForwardVector() * 100000;
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	params.AddIgnoredComponent(MeshRight);
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(hitInfo, start, end, ECC_Visibility, params);
+	// 만약 부딪힌것이 있다면
+	if ( bHit )
+	{
+		// 만약 부딪힌것이 물리가 켜져있다면
+		auto* hitComp = hitInfo.GetComponent();
+		if ( hitComp && hitComp->IsSimulatingPhysics() )
+		{
+			// 힘을 가하고싶다.
+			FVector direction = (end - start).GetSafeNormal();
+			FVector force = direction * 1000 * hitComp->GetMass();
+			hitComp->AddImpulseAtLocation(force, hitInfo.ImpactPoint);
+			// 그곳에 VFX를 표현하고싶다.
+
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FireVFX, hitInfo.ImpactPoint);
+		}
+	}
+	else {
+		// 허공
+	}
+}
+
+void AVRPlayer::DrawCrosshair()
+{
+	// 총의 방향을 그려보고싶다.
+	FVector start = RightAim->GetComponentLocation();
+	FVector end = start + RightAim->GetForwardVector() * 100000;
+	FHitResult hitInfo;
+	bool bHit = HitTest(start, end, hitInfo);
+	float distance = 1;
+
+	if ( bHit )
+	{
+		Crosshair->SetActorLocation(hitInfo.ImpactPoint);
+		DrawDebugLine(GetWorld(), start, hitInfo.ImpactPoint, FColor::Red, false, 0);
+		distance = kAdjustCrosshairScale * hitInfo.Distance / 100;
+	}
+	else
+	{
+		// 허공
+		Crosshair->SetActorLocation(end);
+		DrawDebugLine(GetWorld(), start, end, FColor::Red, false, 0);
+		distance = kAdjustCrosshairScale * FVector::Dist(start, end) / 100;
+	}
+
+	Crosshair->SetActorScale3D(FVector(distance));
+
+
+	// 크로스헤어가 카메라를 바라보게 회전하고싶다.
+	// 빌보드기법
+
+	//FVector toCameraVector = Crosshair->GetActorLocation() - VRCamera->GetComponentLocation();
+	//toCameraVector.Normalize();
+	//Crosshair->SetActorRotation(toCameraVector.Rotation());
+
+	FVector dir = Crosshair->GetActorLocation() - VRCamera->GetComponentLocation();
+	Crosshair->SetActorRotation(UKismetMathLibrary::MakeRotFromX(dir.GetSafeNormal()));
+
+
+
+
+
+
 }
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
@@ -264,6 +354,9 @@ bool AVRPlayer::HitTest(FVector start, FVector end, FHitResult& OutHitInfo)
 {
 	FCollisionQueryParams params;
 	params.AddIgnoredActor(this);
+	params.AddIgnoredComponent(MeshLeft);
+	params.AddIgnoredComponent(MeshRight);
+
 	return GetWorld()->LineTraceSingleByChannel(OutHitInfo, start, end, ECC_Visibility, params);
 }
 
@@ -301,6 +394,8 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		input->BindAction(IA_Teleport, ETriggerEvent::Started, this, &AVRPlayer::ONIATeleportStart);
 		// 뗏을때는 ONIATeleportEnd
 		input->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::ONIATeleportEnd);
+
+		input->BindAction(IA_Fire, ETriggerEvent::Started, this, &AVRPlayer::OnIAFire);
 	}
 }
 

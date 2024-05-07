@@ -117,4 +117,33 @@ public:
 
 	void DoWarp();
 
+	// 총쏘기
+	// 발사할 위치
+	
+	// 생성자에서 생성하고 루트에 붙이고싶다. 트래킹할 모션소스는 "RightAim"
+	UPROPERTY(EditDefaultsOnly)
+	class UMotionControllerComponent* RightAim;
+
+	// Fire입력을 등록하고싶다.
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_Fire;
+
+	// 키입력받을함수
+	void OnIAFire(const FInputActionValue& value);
+
+	// 부딪힌곳에 VFX
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UParticleSystem* FireVFX;
+
+	// Crosshair
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	TSubclassOf<AActor> CrosshairFactory;
+
+	UPROPERTY()
+	AActor* Crosshair;
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float kAdjustCrosshairScale = 1;
+
+	void DrawCrosshair();
 };
