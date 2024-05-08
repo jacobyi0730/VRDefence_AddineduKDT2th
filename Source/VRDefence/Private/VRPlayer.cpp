@@ -312,6 +312,80 @@ void AVRPlayer::DrawCrosshair()
 	Crosshair->SetActorRotation(UKismetMathLibrary::MakeRotFromX(dir.GetSafeNormal()));
 }
 
+void AVRPlayer::OnIAGrip(const FInputActionValue& value)
+{
+	TArray<FOverlapResult> hits;
+	FVector origin = MotionRight->GetComponentLocation();
+	FQuat rot = FQuat::Identity;
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	params.AddIgnoredComponent(MeshRight);
+	params.AddIgnoredComponent(MeshLeft);
+
+	bool bHits = GetWorld()->OverlapMultiByChannel(hits, origin, rot, ECC_Visibility, FCollisionShape::MakeSphere(GripRadius), params);
+
+	// 만약 검출된것이 있다면
+	if ( bHits )
+	{
+		// 최단거리 물체를 찾아서 손에 붙이고싶다.
+		bGrip = true;
+
+		//GripObject = hits 배열에서 가장 가까운 물체의 컴포넌트;
+		// 가장가까운 배열의 인덱스
+		//int32 index = -1;
+		//// 가장가까운 거리
+		//float dist = 999999999;
+		//// 반복적으로 배열의 항목을 접근하고싶다.
+		//for ( int i = 0; i < hits.Num(); i++ )
+		//{
+		//	auto* temp = hits[i].GetComponent();
+		//	// 검출된물체와 손의 거리를 알고싶다.
+		//	float tempDist = FVector::Dist(origin, temp->GetComponentLocation());
+		//	// dist와 tempDist를 비교해서 dist > tempDist 라면
+		//	if ( dist > tempDist )
+		//	{
+		//		// dist = tempDist 대입하고
+		//		dist = tempDist;
+		//		// i 를 기억하고싶다.
+		//		index = i;
+		//	}
+		//}
+		//GripObject = hits[index].GetComponent();
+
+
+		// 정렬
+		hits.Sort([&](const FOverlapResult a, const FOverlapResult b) {
+				
+				
+
+				return true;
+			});
+
+		GripObject->SetSimulatePhysics(false);
+		GripObject->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		GripObject->AttachToComponent(MeshRight, FAttachmentTransformRules::KeepWorldTransform);
+
+		GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), true);
+	}
+}
+
+void AVRPlayer::OnIAUnGrip(const FInputActionValue& value)
+{
+	if ( false == bGrip || nullptr == GripObject )
+		return;
+	// 물체를 놓고
+	GripObject->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+	// 물체의 물리 재설정
+	GripObject->SetSimulatePhysics(true);
+	GripObject->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), false);
+
+	GripObject = nullptr;
+	bGrip = false;
+}
+
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
 {
 	// 누르면 써클이 보이고
@@ -390,6 +464,10 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		input->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::ONIATeleportEnd);
 
 		input->BindAction(IA_Fire, ETriggerEvent::Started, this, &AVRPlayer::OnIAFire);
+
+		// Grip 입력을 등록하고싶다.
+		input->BindAction(IA_Grip, ETriggerEvent::Started, this, &AVRPlayer::OnIAGrip);
+		input->BindAction(IA_Grip, ETriggerEvent::Completed, this, &AVRPlayer::OnIAUnGrip);
 	}
 }
 

@@ -146,4 +146,24 @@ public:
 	float kAdjustCrosshairScale = 1;
 
 	void DrawCrosshair();
+
+
+	// 잡기, 놓기
+	
+	// 입력
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_Grip;
+
+	void OnIAGrip(const FInputActionValue& value);
+	void OnIAUnGrip(const FInputActionValue& value);
+
+	// 물체를 잡고 있는지 여부
+	bool bGrip;
+	// 잡은물체를 기억할 변수
+	UPROPERTY()
+	class UPrimitiveComponent* GripObject;
+	// 잡을 반경
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float GripRadius = 100;
+
 };
