@@ -166,4 +166,26 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	float GripRadius = 100;
 
+	// <던지기>
+
+	// 던지는힘
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float ThrowPower = 50000;
+	// 회전할힘
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float TorquePower = 500;
+	// 던질 방향
+	FVector ThrowDirection;
+	// 이전위치값
+	FVector PrevLocation;
+	// 이전회전값
+	FQuat PrevRotation;
+
+	// 던지는 속성을 계산하는 기능
+	void TickGripCalc();
+	// 던지는 행위의 기능
+	void DoThrowObject();
+
+	// 각속도 : radian / dt * axis
+
 };
