@@ -180,6 +180,7 @@ public:
 	FVector PrevLocation;
 	// 이전회전값
 	FQuat PrevRotation;
+	FQuat deltaAngle;
 
 	// 던지는 속성을 계산하는 기능
 	void TickGripCalc();
@@ -187,5 +188,11 @@ public:
 	void DoThrowObject();
 
 	// 각속도 : radian / dt * axis
+
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_ViewReset;
+
+	void OnIAViewReset(const FInputActionValue& value);
 
 };

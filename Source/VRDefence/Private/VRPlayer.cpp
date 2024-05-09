@@ -11,6 +11,7 @@
 #include <../../../../../../../Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceArrayFunctionLibrary.h>
 #include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h>
 #include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/KismetMathLibrary.h>
+#include <../../../../../../../Plugins/Runtime/XRBase/Source/XRBase/Public/HeadMountedDisplayFunctionLibrary.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -94,7 +95,7 @@ void AVRPlayer::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	DrawCrosshair();
-	
+
 	TickGripCalc();
 
 
@@ -325,7 +326,7 @@ void AVRPlayer::OnIAGrip(const FInputActionValue& value)
 
 	// 잡을 수 있는 물체를 검색한다.
 	// 개선사항 : Object채널로 바꾸고 PhysicsBody만 잡을 수 있게 처리하는게 더 낫다.
-	bool bHits = GetWorld()->OverlapMultiByChannel(hits, origin, rot, ECC_Visibility, FCollisionShape::MakeSphere(GripRadius), params);
+	bool bHits = GetWorld()->OverlapMultiByObjectType(hits, origin, rot, ECC_PhysicsBody, FCollisionShape::MakeSphere(GripRadius), params);
 
 	// 만약 검출된것이 있다면
 	if ( bHits )
@@ -397,8 +398,10 @@ void AVRPlayer::TickGripCalc()
 	// 방향을 만들고싶다.
 	ThrowDirection = MeshRight->GetComponentLocation() - PrevLocation;
 
-	// 회전 각속도를 구하고싶다.
-	// 현재 각과 이전 각의 변이의 크기
+	// 현재 각과 이전 각의 변이의 크기를 기억하고싶다.
+	deltaAngle = MeshRight->GetComponentQuat()
+		* PrevRotation.Inverse();
+
 	PrevLocation = MeshRight->GetComponentLocation();
 	PrevRotation = MeshRight->GetComponentQuat();
 }
@@ -408,7 +411,39 @@ void AVRPlayer::DoThrowObject()
 	if ( GripObject )
 	{
 		GripObject->AddForce(ThrowDirection.GetSafeNormal() * GripObject->GetMass() * ThrowPower);
+
+		//FQuat a = GetActorRotation().Quaternion();
+		//FQuat deltaAngle = FQuat(GetActorUpVector(), 90).Inverse();
+
+		//FQuat result = a * deltaAngle;
+
+
+		FVector axis;
+		float angle;
+		deltaAngle.ToAxisAndAngle(axis, angle);
+		float dt = GetWorld()->GetDeltaSeconds();
+
+		// 각속도 : angle(radian) / dt * axis
+		FVector angularVelocity = angle / dt * axis;
+		GripObject->SetPhysicsAngularVelocityInRadians(angularVelocity, true);
 	}
+}
+
+void AVRPlayer::OnIAViewReset(const FInputActionValue& value)
+{
+	UHeadMountedDisplayFunctionLibrary::SetTrackingOrigin(EHMDTrackingOrigin::Floor);
+
+	// HMD가 활성화 되어있는가?
+	if ( UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled() )
+	{
+		auto* pc = Cast<APlayerController>(Controller);
+		auto conRot = pc->GetControlRotation();
+		conRot.Yaw = 0;
+		pc->SetControlRotation(conRot);
+		UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition(conRot.Yaw);
+
+	}
+
 }
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
@@ -493,6 +528,8 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		// Grip 입력을 등록하고싶다.
 		input->BindAction(IA_Grip, ETriggerEvent::Started, this, &AVRPlayer::OnIAGrip);
 		input->BindAction(IA_Grip, ETriggerEvent::Completed, this, &AVRPlayer::OnIAUnGrip);
+
+		input->BindAction(IA_ViewReset, ETriggerEvent::Started, this, &AVRPlayer::OnIAViewReset);
 	}
 }
 
