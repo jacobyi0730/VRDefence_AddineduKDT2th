@@ -12,6 +12,7 @@
 #include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h>
 #include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/KismetMathLibrary.h>
 #include <../../../../../../../Plugins/Runtime/XRBase/Source/XRBase/Public/HeadMountedDisplayFunctionLibrary.h>
+#include <Haptics/HapticFeedbackEffect_Curve.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -246,6 +247,12 @@ void AVRPlayer::DoWarp()
 
 void AVRPlayer::OnIAFire(const FInputActionValue& value)
 {
+	auto* pc = Cast<APlayerController>(Controller);
+	if ( pc )
+	{
+		pc->PlayHapticEffect(HapticFire, EControllerHand::Right);
+	}
+
 	// 라인트레이스를 발사하고싶다.
 	// RightAim을 이용해서
 	FHitResult hitInfo;
@@ -384,7 +391,7 @@ void AVRPlayer::OnIAUnGrip(const FInputActionValue& value)
 	// 물체의 물리 재설정
 	GripObject->SetSimulatePhysics(true);
 	GripObject->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), false);
+	//GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), false);
 
 	DoThrowObject();
 
@@ -444,6 +451,67 @@ void AVRPlayer::OnIAViewReset(const FInputActionValue& value)
 
 	}
 
+}
+
+void AVRPlayer::OnIARemoteGrip(const FInputActionValue& value)
+{
+	// 만약 손에 잡은물체가 있다면 바로 종료
+	if ( GripObject )
+		return;
+
+	// 선택된 물체를 찾기 위해 
+	FHitResult hitInfo;
+	FVector start = MeshRight->GetComponentLocation();
+	FVector end = start + MeshRight->GetRightVector() * 100000;
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	params.AddIgnoredComponent(MeshRight);
+	params.AddIgnoredComponent(MeshLeft);
+
+	bool bHit = GetWorld()->SweepSingleByObjectType(hitInfo, start, end, FQuat::Identity, ECC_PhysicsBody, FCollisionShape::MakeSphere(20), params);
+	// 부딪힌 물체의 물리가 켜져있다면
+	if ( bHit && hitInfo.GetComponent()->IsSimulatingPhysics() )
+	{
+		bGrip = true;
+
+		GripObject = hitInfo.GetComponent();
+
+		GripObject->SetSimulatePhysics(false);
+		GripObject->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		GripObject->AttachToComponent(MeshRight, FAttachmentTransformRules::KeepWorldTransform);
+
+		GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), true);
+	}
+	float dt = 1.f / 60.f;
+	if ( GripObject )
+	{
+		// 그 물체를 내 손으로 당겨오고싶다. 타이머를 이용해서...
+		GetWorldTimerManager().SetTimer(RemoteGripTimerHandle, [&, dt]() {
+
+			FVector p = GripObject->GetComponentLocation();
+			FVector target = MeshRight->GetComponentLocation();
+			p = FMath::Lerp(p, target, GetWorld()->GetDeltaSeconds() * 6);
+			GripObject->SetWorldLocation(p);
+
+			// 만약 도착했다면
+			// p와 target의 거리를 측정해서 10cm 미만이라면 도착으로 처리하겠다.
+			if ( FVector::Dist(p, target) < 10 )
+			{
+				// 물체의 위치를 target위치로 하고싶다.
+				GripObject->SetWorldLocation(target);
+				// 타이머를 끄고싶다.
+				GetWorldTimerManager().ClearTimer(RemoteGripTimerHandle);
+			}
+
+			}, dt, true);
+	}
+}
+
+void AVRPlayer::OnIARemoteUnGrip(const FInputActionValue& value)
+{
+	GetWorldTimerManager().ClearTimer(RemoteGripTimerHandle);
+	OnIAUnGrip(value);
 }
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
@@ -530,6 +598,10 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		input->BindAction(IA_Grip, ETriggerEvent::Completed, this, &AVRPlayer::OnIAUnGrip);
 
 		input->BindAction(IA_ViewReset, ETriggerEvent::Started, this, &AVRPlayer::OnIAViewReset);
+
+
+		input->BindAction(IA_RemoteGrip, ETriggerEvent::Started, this, &AVRPlayer::OnIARemoteGrip);
+		input->BindAction(IA_RemoteGrip, ETriggerEvent::Completed, this, &AVRPlayer::OnIARemoteUnGrip);
 	}
 }
 

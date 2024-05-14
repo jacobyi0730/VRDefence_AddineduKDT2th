@@ -195,4 +195,18 @@ public:
 
 	void OnIAViewReset(const FInputActionValue& value);
 
+	// 트리거 버튼을 이용한 원거리 물체 잡고 놓기
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_RemoteGrip;
+
+	void OnIARemoteGrip(const FInputActionValue& value);
+	void OnIARemoteUnGrip(const FInputActionValue& value);
+
+	FTimerHandle RemoteGripTimerHandle;
+
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UHapticFeedbackEffect_Curve* HapticFire;
+
+
 };
