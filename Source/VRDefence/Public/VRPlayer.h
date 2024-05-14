@@ -192,12 +192,6 @@ public:
 	FQuat PrevRotation;
 	FQuat deltaAngle;
 
-	// 던지는 속성을 계산하는 기능
-	void TickGripCalc();
-	// 던지는 행위의 기능
-	void DoThrowObject(class UPrimitiveComponent* obj, const FQuat& _deltaAngle);
-
-	// 각속도 : radian / dt * axis
 
 
 	// 왼손
@@ -218,11 +212,14 @@ public:
 	FQuat PrevRotationLeft;
 	FQuat deltaAngleLeft;
 
-
-
 	// 두손이 함께 사용하는 코드
 	struct FOverlapResult DoGrip(class USkeletalMeshComponent* hand);
 	void DoUnGrip(class USkeletalMeshComponent* hand, class UPrimitiveComponent* obj, const FQuat _deltaAngle);
+
+	// 던지는 속성을 계산하는 기능
+	void TickGripCalc();
+	// 던지는 행위의 기능
+	void DoThrowObject(class UPrimitiveComponent* obj, const FQuat& _deltaAngle);
 
 	// 잡을 반경
 	UPROPERTY(EditDefaultsOnly, Category = VR)
