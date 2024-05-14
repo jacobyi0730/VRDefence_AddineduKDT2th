@@ -150,44 +150,6 @@ public:
 
 	// 잡기, 놓기
 	
-	// 입력
-	UPROPERTY(EditDefaultsOnly, Category = VR)
-	class UInputAction* IA_Grip;
-
-	void OnIAGrip(const FInputActionValue& value);
-	void OnIAUnGrip(const FInputActionValue& value);
-
-	// 물체를 잡고 있는지 여부
-	bool bGrip;
-	// 잡은물체를 기억할 변수
-	UPROPERTY()
-	class UPrimitiveComponent* GripObject;
-	// 잡을 반경
-	UPROPERTY(EditDefaultsOnly, Category = VR)
-	float GripRadius = 100;
-
-	// <던지기>
-
-	// 던지는힘
-	UPROPERTY(EditDefaultsOnly, Category = VR)
-	float ThrowPower = 50000;
-	// 회전할힘
-	UPROPERTY(EditDefaultsOnly, Category = VR)
-	float TorquePower = 500;
-	// 던질 방향
-	FVector ThrowDirection;
-	// 이전위치값
-	FVector PrevLocation;
-	// 이전회전값
-	FQuat PrevRotation;
-	FQuat deltaAngle;
-
-	// 던지는 속성을 계산하는 기능
-	void TickGripCalc();
-	// 던지는 행위의 기능
-	void DoThrowObject();
-
-	// 각속도 : radian / dt * axis
 
 
 	UPROPERTY(EditDefaultsOnly, Category = VR)
@@ -207,6 +169,74 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	class UHapticFeedbackEffect_Curve* HapticFire;
+
+
+	// 오른손과 왼손으로 각 각 물체를 잡을 수 있다.
+	// 반대손으로 물체를 뺏어올 수 있다.
+
+	// 오른손
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_Grip;
+
+	void OnIAGrip(const FInputActionValue& value);
+	void OnIAUnGrip(const FInputActionValue& value);
+
+	// 잡은물체를 기억할 변수
+	UPROPERTY()
+	class UPrimitiveComponent* GripObject;
+	// 던질 방향
+	FVector ThrowDirection;
+	// 이전위치값
+	FVector PrevLocation;
+	// 이전회전값
+	FQuat PrevRotation;
+	FQuat deltaAngle;
+
+	// 던지는 속성을 계산하는 기능
+	void TickGripCalc();
+	// 던지는 행위의 기능
+	void DoThrowObject(class UPrimitiveComponent* obj, const FQuat& _deltaAngle);
+
+	// 각속도 : radian / dt * axis
+
+
+	// 왼손
+	UPROPERTY()
+	class UPrimitiveComponent* GripObjectLeft;
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_GripLeft;
+
+	void OnIAGripLeft(const FInputActionValue& value);
+	void OnIAUnGripLeft(const FInputActionValue& value);
+
+	// 던질 방향
+	FVector ThrowDirectionLeft;
+	// 이전위치값
+	FVector PrevLocationLeft;
+	// 이전회전값
+	FQuat PrevRotationLeft;
+	FQuat deltaAngleLeft;
+
+
+
+	// 두손이 함께 사용하는 코드
+	struct FOverlapResult DoGrip(class USkeletalMeshComponent* hand);
+	void DoUnGrip(class USkeletalMeshComponent* hand, class UPrimitiveComponent* obj, const FQuat _deltaAngle);
+
+	// 잡을 반경
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float GripRadius = 100;
+
+	// <던지기>
+	// 던지는힘
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float ThrowPower = 50000;
+	// 회전할힘
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float TorquePower = 500;
+
+
 
 
 };

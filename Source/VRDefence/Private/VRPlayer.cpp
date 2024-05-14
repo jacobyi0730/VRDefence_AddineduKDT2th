@@ -321,87 +321,37 @@ void AVRPlayer::DrawCrosshair()
 	Crosshair->SetActorRotation(UKismetMathLibrary::MakeRotFromX(dir.GetSafeNormal()));
 }
 
+// 오른손 Grip 버튼을 눌렀을때
 void AVRPlayer::OnIAGrip(const FInputActionValue& value)
 {
-	TArray<FOverlapResult> hits;
-	FVector origin = MotionRight->GetComponentLocation();
-	FQuat rot = FQuat::Identity;
-	FCollisionQueryParams params;
-	params.AddIgnoredActor(this);
-	params.AddIgnoredComponent(MeshRight);
-	params.AddIgnoredComponent(MeshLeft);
+	FOverlapResult hitObject = DoGrip(MeshRight);
 
-	// 잡을 수 있는 물체를 검색한다.
-	// 개선사항 : Object채널로 바꾸고 PhysicsBody만 잡을 수 있게 처리하는게 더 낫다.
-	bool bHits = GetWorld()->OverlapMultiByObjectType(hits, origin, rot, ECC_PhysicsBody, FCollisionShape::MakeSphere(GripRadius), params);
-
-	// 만약 검출된것이 있다면
-	if ( bHits )
+	if ( nullptr != hitObject.GetActor() )
 	{
-		// 최단거리 물체를 찾아서 손에 붙이고싶다.
-		bGrip = true;
-
-		//GripObject = hits 배열에서 가장 가까운 물체의 컴포넌트;
-		// 가장가까운 배열의 인덱스
-		int32 index = -1;
-		// 가장가까운 거리
-		float dist = 999999999;
-		// 반복적으로 배열의 항목을 접근하고싶다.
-		for ( int i = 0; i < hits.Num(); i++ )
-		{
-			auto* temp = hits[i].GetComponent();
-			// 검출된물체와 손의 거리를 알고싶다.
-			float tempDist = FVector::Dist(origin, temp->GetComponentLocation());
-			// dist와 tempDist를 비교해서 dist > tempDist 라면
-			if ( dist > tempDist )
-			{
-				// dist = tempDist 대입하고
-				dist = tempDist;
-				// i 를 기억하고싶다.
-				index = i;
-			}
-		}
-		GripObject = hits[index].GetComponent();
-
-		// 정렬
-		/*hits.Sort([&](const FOverlapResult a, const FOverlapResult b) {
-			float distA = FVector::Dist(origin, a.GetComponent()->GetComponentLocation());
-			float distB = FVector::Dist(origin, b.GetComponent()->GetComponentLocation());
-			return distA < distB;
-		});
-
-		GripObject = hits[0].GetComponent();*/
+		GripObject = hitObject.GetComponent();
 
 		GripObject->SetSimulatePhysics(false);
 		GripObject->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), true);
 
 		GripObject->AttachToComponent(MeshRight, FAttachmentTransformRules::KeepWorldTransform);
 
-		GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), true);
 	}
 }
 
 void AVRPlayer::OnIAUnGrip(const FInputActionValue& value)
 {
-	if ( false == bGrip || nullptr == GripObject )
+	if ( nullptr == GripObject )
 		return;
-	// 물체를 놓고
-	GripObject->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
-	// 물체의 물리 재설정
-	GripObject->SetSimulatePhysics(true);
-	GripObject->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//GripObject->IgnoreComponentWhenMoving(GetCapsuleComponent(), false);
-
-	DoThrowObject();
-
+	DoUnGrip(MeshRight, GripObject, deltaAngle);
 
 	GripObject = nullptr;
-	bGrip = false;
 }
 
 void AVRPlayer::TickGripCalc()
 {
+	// 오른손
 	// 방향을 만들고싶다.
 	ThrowDirection = MeshRight->GetComponentLocation() - PrevLocation;
 
@@ -411,13 +361,25 @@ void AVRPlayer::TickGripCalc()
 
 	PrevLocation = MeshRight->GetComponentLocation();
 	PrevRotation = MeshRight->GetComponentQuat();
+
+	// ===============
+	// 왼손
+	// 방향을 만들고싶다.
+	ThrowDirectionLeft = MeshLeft->GetComponentLocation() - PrevLocationLeft;
+
+	// 현재 각과 이전 각의 변이의 크기를 기억하고싶다.
+	deltaAngleLeft = MeshLeft->GetComponentQuat()
+		* PrevRotationLeft.Inverse();
+
+	PrevLocationLeft = MeshLeft->GetComponentLocation();
+	PrevRotationLeft = MeshLeft->GetComponentQuat();
 }
 
-void AVRPlayer::DoThrowObject()
+void AVRPlayer::DoThrowObject(UPrimitiveComponent* obj, const FQuat& _deltaAngle)
 {
-	if ( GripObject )
+	if ( obj )
 	{
-		GripObject->AddForce(ThrowDirection.GetSafeNormal() * GripObject->GetMass() * ThrowPower);
+		obj->AddForce(ThrowDirection.GetSafeNormal() * obj->GetMass() * ThrowPower);
 
 		//FQuat a = GetActorRotation().Quaternion();
 		//FQuat deltaAngle = FQuat(GetActorUpVector(), 90).Inverse();
@@ -427,12 +389,12 @@ void AVRPlayer::DoThrowObject()
 
 		FVector axis;
 		float angle;
-		deltaAngle.ToAxisAndAngle(axis, angle);
+		_deltaAngle.ToAxisAndAngle(axis, angle);
 		float dt = GetWorld()->GetDeltaSeconds();
 
 		// 각속도 : angle(radian) / dt * axis
 		FVector angularVelocity = angle / dt * axis;
-		GripObject->SetPhysicsAngularVelocityInRadians(angularVelocity, true);
+		obj->SetPhysicsAngularVelocityInRadians(angularVelocity, true);
 	}
 }
 
@@ -472,8 +434,6 @@ void AVRPlayer::OnIARemoteGrip(const FInputActionValue& value)
 	// 부딪힌 물체의 물리가 켜져있다면
 	if ( bHit && hitInfo.GetComponent()->IsSimulatingPhysics() )
 	{
-		bGrip = true;
-
 		GripObject = hitInfo.GetComponent();
 
 		GripObject->SetSimulatePhysics(false);
@@ -512,6 +472,90 @@ void AVRPlayer::OnIARemoteUnGrip(const FInputActionValue& value)
 {
 	GetWorldTimerManager().ClearTimer(RemoteGripTimerHandle);
 	OnIAUnGrip(value);
+}
+
+void AVRPlayer::OnIAGripLeft(const FInputActionValue& value)
+{
+	FOverlapResult hitObject = DoGrip(MeshLeft);
+
+	if ( nullptr != hitObject.GetActor() )
+	{
+		GripObjectLeft = hitObject.GetComponent();
+
+		GripObjectLeft->SetSimulatePhysics(false);
+		GripObjectLeft->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GripObjectLeft->IgnoreComponentWhenMoving(GetCapsuleComponent(), true);
+
+		GripObjectLeft->AttachToComponent(MeshLeft, FAttachmentTransformRules::KeepWorldTransform);
+	}
+}
+
+void AVRPlayer::OnIAUnGripLeft(const FInputActionValue& value)
+{
+	if ( nullptr == GripObjectLeft )
+		return;
+
+	DoUnGrip(MeshLeft, GripObjectLeft, deltaAngleLeft);
+
+	GripObjectLeft = nullptr;
+}
+
+FOverlapResult AVRPlayer::DoGrip(USkeletalMeshComponent* hand)
+{
+	TArray<FOverlapResult> hits;
+	FVector origin = hand->GetComponentLocation();
+	FQuat rot = FQuat::Identity;
+	FCollisionQueryParams params;
+	params.AddIgnoredActor(this);
+	params.AddIgnoredComponent(MeshRight);
+	params.AddIgnoredComponent(MeshLeft);
+
+	// 잡을 수 있는 물체를 검색한다.
+	// 개선사항 : Object채널로 바꾸고 PhysicsBody만 잡을 수 있게 처리하는게 더 낫다.
+	bool bHits = GetWorld()->OverlapMultiByObjectType(hits, origin, rot, ECC_PhysicsBody, FCollisionShape::MakeSphere(GripRadius), params);
+
+	// 만약 검출된것이 있다면
+	if ( bHits )
+	{
+		// 최단거리 물체를 찾아서 손에 붙이고싶다.
+
+		//GripObject = hits 배열에서 가장 가까운 물체의 컴포넌트;
+		// 가장가까운 배열의 인덱스
+		int32 index = -1;
+		// 가장가까운 거리
+		float dist = 999999999;
+		// 반복적으로 배열의 항목을 접근하고싶다.
+		for ( int i = 0; i < hits.Num(); i++ )
+		{
+			auto* temp = hits[i].GetComponent();
+			// 검출된물체와 손의 거리를 알고싶다.
+			float tempDist = FVector::Dist(origin, temp->GetComponentLocation());
+			// dist와 tempDist를 비교해서 dist > tempDist 라면
+			if ( dist > tempDist )
+			{
+				// dist = tempDist 대입하고
+				dist = tempDist;
+				// i 를 기억하고싶다.
+				index = i;
+			}
+		}
+		return hits[index];
+	}
+	return FOverlapResult();
+}
+
+void AVRPlayer::DoUnGrip(USkeletalMeshComponent* hand, UPrimitiveComponent* obj, const FQuat _deltaAngle)
+{
+	// 물체를 놓고
+	obj->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+	// 물체의 물리 재설정
+	obj->SetSimulatePhysics(true);
+	obj->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//obj->IgnoreComponentWhenMoving(GetCapsuleComponent(), false);
+
+	DoThrowObject(obj, _deltaAngle);
+
 }
 
 void AVRPlayer::ONIATeleportStart(const FInputActionValue& value)
@@ -596,6 +640,10 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		// Grip 입력을 등록하고싶다.
 		input->BindAction(IA_Grip, ETriggerEvent::Started, this, &AVRPlayer::OnIAGrip);
 		input->BindAction(IA_Grip, ETriggerEvent::Completed, this, &AVRPlayer::OnIAUnGrip);
+
+		input->BindAction(IA_GripLeft, ETriggerEvent::Started, this, &AVRPlayer::OnIAGripLeft);
+		input->BindAction(IA_GripLeft, ETriggerEvent::Completed, this, &AVRPlayer::OnIAUnGripLeft);
+
 
 		input->BindAction(IA_ViewReset, ETriggerEvent::Started, this, &AVRPlayer::OnIAViewReset);
 
