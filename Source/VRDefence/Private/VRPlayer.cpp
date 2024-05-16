@@ -13,6 +13,7 @@
 #include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/KismetMathLibrary.h>
 #include <../../../../../../../Plugins/Runtime/XRBase/Source/XRBase/Public/HeadMountedDisplayFunctionLibrary.h>
 #include <Haptics/HapticFeedbackEffect_Curve.h>
+#include "GunActor.h"
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -274,10 +275,10 @@ void AVRPlayer::OnIAFire(const FInputActionValue& value)
 			FVector direction = (end - start).GetSafeNormal();
 			FVector force = direction * 1000 * hitComp->GetMass();
 			hitComp->AddImpulseAtLocation(force, hitInfo.ImpactPoint);
-			// 그곳에 VFX를 표현하고싶다.
-
-			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FireVFX, hitInfo.ImpactPoint);
 		}
+
+		// 그곳에 VFX를 표현하고싶다.
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FireVFX, hitInfo.ImpactPoint);
 	}
 	else {
 		// 허공
@@ -478,8 +479,15 @@ void AVRPlayer::OnIAGripLeft(const FInputActionValue& value)
 {
 	FOverlapResult hitObject = DoGrip(MeshLeft);
 
+
 	if ( nullptr != hitObject.GetActor() )
 	{
+		if ( hitObject.GetActor()->Tags.Contains(TEXT("Gun")) )
+		{
+			GunActor = Cast<AGunActor>(hitObject.GetActor());
+			GunActor->SetGrip(true);
+		}
+
 		GripObjectLeft = hitObject.GetComponent();
 
 		GripObjectLeft->SetSimulatePhysics(false);
@@ -495,9 +503,23 @@ void AVRPlayer::OnIAUnGripLeft(const FInputActionValue& value)
 	if ( nullptr == GripObjectLeft )
 		return;
 
+	if ( GunActor )
+	{
+		GunActor->SetGrip(false);
+		GunActor = nullptr;
+	}
+
 	DoUnGrip(MeshLeft, GripObjectLeft, deltaAngleLeft);
 
 	GripObjectLeft = nullptr;
+}
+
+void AVRPlayer::OnIALeftFire(const FInputActionValue& value)
+{
+	if ( GunActor )
+	{
+		GunActor->OnMyFire();
+	}
 }
 
 FOverlapResult AVRPlayer::DoGrip(USkeletalMeshComponent* hand)
@@ -636,6 +658,8 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		input->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::ONIATeleportEnd);
 
 		input->BindAction(IA_Fire, ETriggerEvent::Started, this, &AVRPlayer::OnIAFire);
+
+		input->BindAction(IA_LeftFire, ETriggerEvent::Started, this, &AVRPlayer::OnIALeftFire);
 
 		// Grip 입력을 등록하고싶다.
 		input->BindAction(IA_Grip, ETriggerEvent::Started, this, &AVRPlayer::OnIAGrip);

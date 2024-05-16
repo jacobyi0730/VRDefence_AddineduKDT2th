@@ -212,6 +212,17 @@ public:
 	FQuat PrevRotationLeft;
 	FQuat deltaAngleLeft;
 
+
+	UPROPERTY()
+	class AGunActor* GunActor;
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UInputAction* IA_LeftFire;
+
+	void OnIALeftFire(const FInputActionValue& value);
+
+
+
 	// 두손이 함께 사용하는 코드
 	struct FOverlapResult DoGrip(class USkeletalMeshComponent* hand);
 	void DoUnGrip(class USkeletalMeshComponent* hand, class UPrimitiveComponent* obj, const FQuat _deltaAngle);
@@ -232,6 +243,8 @@ public:
 	// 회전할힘
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	float TorquePower = 500;
+
+
 
 
 
