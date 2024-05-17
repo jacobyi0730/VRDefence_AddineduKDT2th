@@ -42,8 +42,21 @@ public:
 	UPROPERTY()
 	class AActor* Target;
 
-private:
 	void TickSearch();
 	void TickMove();
 	void TickAttack();
+
+	int32 MaxHP = 2;
+	int32 HP = MaxHP;
+
+	bool bDie;
+
+	void OnMyTakeDamage(int32 damage);
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UWidgetComponent* EnemyHPComp;	// 생성자에서
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UEnemyHPWidget* EnemyHP;		// beginPlay에서
+
 };

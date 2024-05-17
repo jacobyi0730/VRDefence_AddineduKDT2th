@@ -3,6 +3,7 @@
 
 #include "GunActor.h"
 #include <../../../../../../../Source/Runtime/Engine/Classes/Kismet/GameplayStatics.h>
+#include "Enemy.h"
 
 // Sets default values
 AGunActor::AGunActor()
@@ -69,6 +70,15 @@ void AGunActor::OnMyFire()
 			FVector force = direction * 1000 * hitComp->GetMass();
 			hitComp->AddImpulseAtLocation(force, hitInfo.ImpactPoint);
 		}
+
+		// 만약 부딪힌 액터가 적이라면
+		if ( hitInfo.GetActor()->IsA<AEnemy>() )
+		{
+			// 적의 OnMyTakeDamage를 호출하고싶다.
+			auto* enemy = Cast<AEnemy>(hitInfo.GetActor());
+			enemy->OnMyTakeDamage(1);
+		}
+
 
 		// 그곳에 VFX를 표현하고싶다.
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FireVFX, hitInfo.ImpactPoint);
