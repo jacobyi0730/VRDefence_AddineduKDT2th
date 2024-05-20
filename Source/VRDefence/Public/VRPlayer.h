@@ -245,8 +245,9 @@ public:
 	float TorquePower = 500;
 
 
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	class UWidgetInteractionComponent* Interaction;
 
-
-
+	void OnIAReleasePointer(const FInputActionValue& value);
 
 };

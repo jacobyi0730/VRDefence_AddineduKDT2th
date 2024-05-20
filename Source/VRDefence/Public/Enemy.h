@@ -11,6 +11,8 @@ enum class EEnemyState : uint8 {
 	Search	UMETA(DisplayerName = SEARCH),
 	Move	UMETA(DisplayerName = MOVE),
 	Attack	UMETA(DisplayerName = ATTACK),
+	Flying  UMETA(DisplayerName = FLYING),
+	Die		UMETA(DisplayerName = DIE),
 };
 
 
@@ -45,6 +47,8 @@ public:
 	void TickSearch();
 	void TickMove();
 	void TickAttack();
+	void TickFlying();
+	void TickDie();
 
 	int32 MaxHP = 2;
 	int32 HP = MaxHP;
@@ -52,11 +56,20 @@ public:
 	bool bDie;
 
 	void OnMyTakeDamage(int32 damage);
+	void OnMyTakeDamageWithFlying(FVector origin, float upward, UPrimitiveComponent* comp);
 
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	class UWidgetComponent* EnemyHPComp;	// 생성자에서
 
 	UPROPERTY(EditDefaultsOnly, Category = VR)
 	class UEnemyHPWidget* EnemyHP;		// beginPlay에서
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float FlyingForce = 10;
+
+	float CurrentTime = 0;
+
+	UPROPERTY(EditDefaultsOnly, Category = VR)
+	float FlyingTime = 0.5f;
 
 };

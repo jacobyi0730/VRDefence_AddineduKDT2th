@@ -47,6 +47,8 @@ void AEnemy::Tick(float DeltaTime)
 	case EEnemyState::Search:	TickSearch();		break;
 	case EEnemyState::Move:		TickMove();			break;
 	case EEnemyState::Attack:	TickAttack();		break;
+	case EEnemyState::Flying:	TickFlying();		break;
+	case EEnemyState::Die:		TickDie();			break;
 	}
 
 	FString strState = UEnum::GetValueAsString(State);
@@ -88,6 +90,43 @@ void AEnemy::TickAttack()
 
 }
 
+void AEnemy::TickFlying()
+{
+	// 날라가는중
+	CurrentTime += GetWorld()->GetDeltaSeconds();
+	if ( CurrentTime > FlyingTime )
+	{
+		CurrentTime = 0;
+		State = EEnemyState::Die;
+		this->Destroy();
+		// VFX 를 내 위치에 생성하고싶다.
+	}
+}
+
+void AEnemy::TickDie()
+{
+	// 날라가는것이 끝나서 폭발해야하는 시점
+}
+
+
+void AEnemy::OnMyTakeDamageWithFlying(FVector origin, float upward, UPrimitiveComponent* comp)
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnMyTakeDamageWithFlying"));
+
+	State = EEnemyState::Flying;
+
+	AI->StopMovement();
+	UnPossessed();
+
+	comp->SetSimulatePhysics(true);
+
+	FVector myLoc = GetActorLocation();
+	FVector force = (myLoc - origin) + FVector(0, 0, upward);
+	force *= FlyingForce;
+	// 시작
+	comp->AddImpulse(force);
+}
+
 void AEnemy::OnMyTakeDamage(int32 damage)
 {
 	if ( bDie )
@@ -109,4 +148,5 @@ void AEnemy::OnMyTakeDamage(int32 damage)
 
 	EnemyHP->UpdateInfo(HP, MaxHP);
 }
+
 

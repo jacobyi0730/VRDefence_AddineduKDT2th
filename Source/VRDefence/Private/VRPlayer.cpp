@@ -15,6 +15,8 @@
 #include <Haptics/HapticFeedbackEffect_Curve.h>
 #include "GunActor.h"
 #include "Enemy.h"
+#include "Grenade.h"
+#include <../../../../../../../Source/Runtime/UMG/Public/Components/WidgetInteractionComponent.h>
 
 // Sets default values
 AVRPlayer::AVRPlayer()
@@ -68,6 +70,10 @@ AVRPlayer::AVRPlayer()
 	RightAim = CreateDefaultSubobject<UMotionControllerComponent>(TEXT("RightAim"));
 	RightAim->SetupAttachment(RootComponent);
 	RightAim->SetTrackingMotionSource(TEXT("RightAim"));
+
+
+	Interaction = CreateDefaultSubobject<UWidgetInteractionComponent>(TEXT("Interaction"));
+	Interaction->SetupAttachment(RightAim);
 
 }
 
@@ -249,6 +255,12 @@ void AVRPlayer::DoWarp()
 
 void AVRPlayer::OnIAFire(const FInputActionValue& value)
 {
+	if ( Interaction )
+	{
+		Interaction->PressPointerKey(EKeys::LeftMouseButton);
+	}
+
+
 	auto* pc = Cast<APlayerController>(Controller);
 	if ( pc )
 	{
@@ -405,6 +417,21 @@ void AVRPlayer::DoThrowObject(UPrimitiveComponent* obj, const FQuat& _deltaAngle
 		// 각속도 : angle(radian) / dt * axis
 		FVector angularVelocity = angle / dt * axis;
 		obj->SetPhysicsAngularVelocityInRadians(angularVelocity, true);
+
+		// 만약에 해당 컴포넌트의 오너가 수류탄이라면????
+		auto* grenade = Cast<AGrenade>(obj->GetOwner());
+		if ( grenade ){
+			// 수류탄의 Play를 호출하고싶다.
+			grenade->Play();
+		}
+	}
+}
+
+void AVRPlayer::OnIAReleasePointer(const FInputActionValue& value)
+{
+	if ( Interaction )
+	{
+		Interaction->ReleasePointerKey(EKeys::LeftMouseButton);
 	}
 }
 
@@ -667,6 +694,10 @@ void AVRPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		input->BindAction(IA_Teleport, ETriggerEvent::Completed, this, &AVRPlayer::ONIATeleportEnd);
 
 		input->BindAction(IA_Fire, ETriggerEvent::Started, this, &AVRPlayer::OnIAFire);
+
+		input->BindAction(IA_Fire, ETriggerEvent::Completed, this, &AVRPlayer::OnIAReleasePointer);
+		
+
 
 		input->BindAction(IA_LeftFire, ETriggerEvent::Started, this, &AVRPlayer::OnIALeftFire);
 
